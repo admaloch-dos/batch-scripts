@@ -4,42 +4,70 @@ setlocal enabledelayedexpansion
 ::Intro text
 
 echo.
-echo    ********************************************************
-echo    ********* Florida Memory Combine Word Documents ********
-echo    ********************************************************
+echo   *************************************************
+echo  ****** Florida Memory Combine Word Documents ******
+echo   *************************************************
 echo.
 
-echo.
 echo Instructions:
 echo.
-echo 1. Locate the file called Add Word Documents.
-echo 2. Drag and drop the files you want to combine.
-echo 3. Add a name for the new file below.
-echo 4. Click enter when you're ready to create the new file.
+echo  --- 1. Locate the file, "Add Word Documents"
+echo  --- 2. Drag and drop the documents you want to combine
+echo  --- 3. (Optional) Add a name for the new file below
+echo  --- 4. Click enter to merge the files
+echo  --- 5. Check your desktop for the results
 echo.
 
-::determine current location
-@REM set "main_location=C:\Users\%USERNAME%\Desktop\Merge Word Documents"
+:: Determine current location
 set "main_location=%~dp0"
-::set word docs file
-cd /d %main_location%\add-word-docs-here
-::  DocxMerge.exe file
+
+:: Set location to add word docs
+set "word_doc_location=%main_location%\add-word-docs-here"
+
+:: DocxMerge.exe file
 set "merge_tool=%main_location%\DocxMerge.exe"
+
 :: Set the output location
 set "output_location=C:\Users\%USERNAME%\Desktop"
-::file type
-set "file_type=.docx"
+
+
+:: Prompt user for file name
+set /p user_name_input="Enter a name for the new file: "
+
+:: Set the file name with timestamp
+set TIMESTAMP=%DATE:/=-%_%TIME::=-%
+set TIMESTAMP=%TIMESTAMP: =%
+
+IF "%user_name_input%"=="" (
+    set "user_name_input=%USERNAME%"
+)
+
+set "file_name=%user_name_input%_%TIMESTAMP%"
+
+:LOOP
+:: Check if the word doc directory is empty
+dir /b /s /a "%word_doc_location%\" | findstr .>nul || (
+    echo Unable to locate any word documents.
+    echo Add files to the, "Add Word Documents" folder, then double click enter to continue.
+    pause >nul
+    goto :LOOP
+)
+
+for /f "delims=" %%a in ('dir /b /a-d "%word_doc_location%\*"') do (
+    set "file_type=%%~xa"
+    goto :BREAK
+)
+:BREAK
 
 set "files="
 
+cd /d %word_doc_location%
+
 for %%i in (*%file_type%) do set files=!files! "%%i"
 
-::prompt user for file name
-set /p user_name_input="Enter name: "
-
-:: set the file name with timestamp
-set TIMESTAMP=%DATE:/=-%_%TIME::=-%
-set TIMESTAMP=%TIMESTAMP: =%
-set "file_name=%user_name_input%_%TIMESTAMP%"
-
 "%merge_tool%" -i %files% -o "%output_location%\%file_name%.docx" -f
+:: Delete contents of the word doc directory
+del /q "%word_doc_location%\*.*"
+rd /s /q "%word_doc_location%"
+
+
